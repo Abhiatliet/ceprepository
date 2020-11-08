@@ -1,0 +1,28 @@
+{
+	"name": "pollutionmergefileoutput",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "pollutionstoragekeyvaultLKS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@concat(formatDateTime(addDays(utcnow(),mul(int(variables('LastNDays')),-1)),'dd-MM-yyyy'),'.csv')",
+					"type": "Expression"
+				},
+				"folderPath": "output",
+				"container": "pollutiondata"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

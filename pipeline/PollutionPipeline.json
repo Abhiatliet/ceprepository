@@ -1,0 +1,168 @@
+{
+	"name": "PollutionPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "ReadPollutionFiles",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(0,int(variables('LastNDays')))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "CopyPollutionFiles",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat('pollutionrawdata','/', formatDateTime(addDays(utcnow(),mul(int(variables('LastNDays')),-1)),'yyyy'),'/',formatDateTime(addDays(utcnow(),mul(int(variables('LastNDays')),-1)),'MM'),'/',formatDateTime(addDays(utcnow(),mul(int(variables('LastNDays')),-1)),'dd'))\n",
+											"type": "Expression"
+										},
+										"wildcardFileName": "*"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings",
+										"copyBehavior": "MergeFiles"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "PollutionDataSet",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "pollutionmergefileoutput",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "DecrementLastNDay",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "SetIndexValue",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "LastNDays",
+								"value": {
+									"value": "@variables('IndexValue')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "SetIndexValue",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "CopyPollutionFiles",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "IndexValue",
+								"value": {
+									"value": "@string(sub(int(variables('LastNDays')),1))",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			},
+			{
+				"name": "PollutionDataFlow",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "ReadPollutionFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "PollutionDataFlow",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					}
+				}
+			}
+		],
+		"variables": {
+			"LastNDays": {
+				"type": "String",
+				"defaultValue": "2"
+			},
+			"IndexValue": {
+				"type": "String",
+				"defaultValue": "0"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-11-08T20:30:26Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

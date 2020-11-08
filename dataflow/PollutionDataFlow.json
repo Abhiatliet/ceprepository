@@ -1,0 +1,32 @@
+{
+	"name": "PollutionDataFlow",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "MergedPollutionDataset",
+						"type": "DatasetReference"
+					},
+					"name": "MergedPollutionFiles"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "OutputAggregatedPollutionDataSet",
+						"type": "DatasetReference"
+					},
+					"name": "PollutionAggregatedDataSink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "AggregatePollutionData"
+				}
+			],
+			"script": "source(output(\n\t\tid as short,\n\t\tcountry as string,\n\t\tstate as string,\n\t\tcity as string,\n\t\tstation as string,\n\t\tlast_update as timestamp,\n\t\tpollutant_id as string,\n\t\tpollutant_min as string,\n\t\tpollutant_max as string,\n\t\tpollutant_avg as string,\n\t\tpollutant_unit as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> MergedPollutionFiles\nMergedPollutionFiles aggregate(groupBy(station),\n\tAvg_pollution_min = avg(toInteger(pollutant_min)),\n\t\tAvg_pollution_avg = avg(toInteger(pollutant_avg)),\n\t\tAvg_pollution_max = avg(toInteger(pollutant_max))) ~> AggregatePollutionData\nAggregatePollutionData sink(input(\n\t\tid as string,\n\t\tcountry as string,\n\t\tstate as string,\n\t\tcity as string,\n\t\tstation as string,\n\t\tlast_update as string,\n\t\tpollutant_id as string,\n\t\tpollutant_min as string,\n\t\tpollutant_max as string,\n\t\tpollutant_avg as string,\n\t\tpollutant_unit as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['AggregatedPollutionDataFile.csv'],\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> PollutionAggregatedDataSink"
+		}
+	}
+}
